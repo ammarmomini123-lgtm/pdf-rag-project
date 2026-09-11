@@ -1,49 +1,45 @@
 import os
 from typing import Optional
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from app.config.settings import settings
 
 
 class LLMProvider:
-    """Initializes and exposes the Google Gemini LLM instance."""
+    """Initializes and exposes the Groq LLM instance."""
 
     def __init__(
         self, 
         model_name: Optional[str] = None, 
         temperature: float = 0.0
     ):
-        # Retrieve API key checking GEMINI_API_KEY first, then GOOGLE_API_KEY fallback
-        api_key = getattr(settings, "GEMINI_API_KEY", None) or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        # Retrieve API key
+        api_key = getattr(settings, "GROQ_API_KEY", None) or os.getenv("GROQ_API_KEY")
         
         if not api_key:
             raise ValueError(
-                "Neither GEMINI_API_KEY nor GOOGLE_API_KEY is configured in settings or environment."
+                "GROQ_API_KEY is missing from settings or environment variables."
             )
 
-        # Default model selection with fallback
-        raw_model_name = (
+        # Default model selection: llama-3.3-70b-versatile
+        selected_model = (
             model_name 
             or getattr(settings, "LLM_MODEL_NAME", None) 
-            or "gemini-1.5-flash"
+            or "llama-3.3-70b-versatile"
         )
 
-        # Clean model string: strip accidental 'models/' prefix and leading/trailing whitespace
-        clean_model_name = raw_model_name.replace("models/", "").strip()
+        print(f"⚡ Initializing ChatGroq with model: '{selected_model}'")
 
-        print(f"🤖 Initializing ChatGoogleGenerativeAI with model: '{clean_model_name}'")
-
-        self.llm = ChatGoogleGenerativeAI(
-            model=clean_model_name,
-            google_api_key=api_key,
+        self.llm = ChatGroq(
+            model=selected_model,
+            groq_api_key=api_key,
             temperature=temperature,
-            max_output_tokens=1024,
-            top_p=0.95
+            max_tokens=1024,
         )
 
-    def get_llm(self) -> ChatGoogleGenerativeAI:
-        """Returns the configured ChatGoogleGenerativeAI instance."""
+    def get_llm(self) -> ChatGroq:
+        """Returns the configured ChatGroq instance."""
         return self.llm
 
 
-# Backward-compatibility alias in case pipelines reference LLMClient
+# Backward-compatibility alias
 LLMClient = LLMProvider
