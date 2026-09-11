@@ -8,7 +8,7 @@ class Settings:
     # API Keys (support both GEMINI_API_KEY and GOOGLE_API_KEY)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
 
-    LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "gemini-1.5-flash-latest")
+    LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "gemini-1.5-flash")
 
     # Directories
     RAW_DATA_DIR: str = os.getenv("RAW_DATA_DIR", "data/raw")
