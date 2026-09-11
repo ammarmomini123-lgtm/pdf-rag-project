@@ -1,34 +1,128 @@
-from typing import Dict, Any
-from app.pipelines.retrieval_pipeline import RetrievalPipeline
+from typing import Dict, Any, List
+from langchain_core.prompts import ChatPromptTemplate
 from app.llm.llm import LLMProvider
-from app.config.prompts import RAG_PROMPT_TEMPLATE
+from app.vectorstore.chroma_store import ChromaVectorStore, ChromaCustomRetriever
+from app.embeddings.embedding_model import EmbeddingModel 
+from app.config.settings import settings
+
 
 class RAGPipeline:
-    """Combines context retrieval with LLM generation."""
+    """Combines context retrieval with strict LLM answer generation and citation extraction."""
 
     def __init__(self):
-        self.retrieval_pipeline = RetrievalPipeline()
+        self.vector_store = ChromaVectorStore()
+        self.embedder = EmbeddingModel()
+        
+        self.retriever = ChromaCustomRetriever(
+            vector_store=self.vector_store,
+            embedder=self.embedder
+        )
+
         self.llm = LLMProvider().get_llm()
-        self.prompt = RAG_PROMPT_TEMPLATE
+
+        # System prompt strictly grounded on provided context
+        self.prompt = ChatPromptTemplate.from_template(
+            """You are a professional AI Knowledge Assistant for AeroEstate Realty.
+Answer the user's question using ONLY the provided context chunks.
+
+CONTEXT:
+{context}
+
+QUESTION:
+{question}
+
+INSTRUCTIONS & RULES:
+1. Ground your answer strictly in the provided context above. Do not guess, speculate, or draw on outside general knowledge.
+2. If the requested information cannot be found in the provided context, state clearly: "The requested information could not be found in the uploaded documents."
+3. Keep the response concise, professional, and clear.
+4. At the end of your response, list the source documents used in this exact format:
+📄 Document_Name.pdf — Page X"""
+        )
 
     def run(self, question: str) -> Dict[str, Any]:
-        retrieved_chunks = self.retrieval_pipeline.run(question)
-
-        if not retrieved_chunks:
+        """Executes RAG pipeline: Retrieve -> Guardrail Check -> LLM Generate -> Extract Sources."""
+        if not question or not question.strip():
             return {
-                "answer": "No relevant context found in the database.",
+                "answer": "Please provide a valid question.",
                 "context": []
             }
 
-        context_str = "\n\n---\n\n".join([
-            f"Source: {chunk['source']} (Page {chunk['page'] + 1})\nContent: {chunk['content']}"
-            for chunk in retrieved_chunks
-        ])
+        # 1. Retrieve relevant chunks
+        docs = self.retriever.invoke(question)
 
+        # 2. Early refusal if no chunks pass threshold
+        if not docs:
+            return {
+                "answer": "The requested information could not be found in the uploaded documents.",
+                "context": []
+            }
+
+        # 3. Format context string with explicit metadata headers
+        context_parts = []
+        for idx, doc in enumerate(docs, start=1):
+            file_name = doc.metadata.get("file_name", "Unknown File")
+            page = doc.metadata.get("page", 1)
+            context_parts.append(
+                f"[Chunk {idx} | File: {file_name} | Page: {page}]\n{doc.page_content}"
+            )
+        context_str = "\n\n---\n\n".join(context_parts)
+
+        # 4. Generate answer via LLM
         chain = self.prompt | self.llm
         response = chain.invoke({"context": context_str, "question": question})
 
+        # Parse string safely
+        raw_content = response.content
+        if isinstance(raw_content, list):
+            text_parts = []
+            for item in raw_content:
+                if isinstance(item, dict) and "text" in item:
+                    text_parts.append(item["text"])
+                elif isinstance(item, str):
+                    text_parts.append(item)
+            answer_text = "".join(text_parts).strip()
+        else:
+            answer_text = str(raw_content).strip()
+
+        # 5. Hallucination Guardrail Refusal Check
+        fallback_phrases = [
+            "could not be found",
+            "not contain information",
+            "does not contain",
+            "information is not available",
+            "cannot answer",
+            "not mentioned in the provided"
+        ]
+
+        is_refusal = any(phrase in answer_text.lower() for phrase in fallback_phrases)
+
+        # 6. Build Deduplicated Source Citations
+        formatted_sources: List[Dict[str, Any]] = []
+        seen_sources = set()
+
+        if not is_refusal:
+            for doc in docs:
+                file_name = doc.metadata.get("file_name", "Unknown File")
+                page = doc.metadata.get("page", 1)
+                doc_id = doc.metadata.get("document_id", "doc_gen")
+                chunk_id = doc.metadata.get("chunk_id", "")
+
+                source_key = f"{file_name}_p{page}"
+                if source_key not in seen_sources:
+                    seen_sources.add(source_key)
+                    formatted_sources.append({
+                        "document_id": doc_id,
+                        "chunk_id": chunk_id,
+                        "file_name": file_name,
+                        "file_path": doc.metadata.get("file_path", "N/A"),
+                        "file_type": doc.metadata.get("file_type", "pdf"),
+                        "author": doc.metadata.get("author", "Unknown Author"),
+                        "page": page,
+                        "score": round(float(doc.metadata.get("score", 0.0)), 4),
+                        "content_snippet": doc.page_content[:300] + "..." if len(doc.page_content) > 300 else doc.page_content
+                    })
+
         return {
-            "answer": response.content,
-            "context": retrieved_chunks
+            "answer": answer_text,
+            "context": formatted_sources
         }

@@ -1,128 +1,175 @@
-# 📚 Enterprise PDF RAG Assistant
+# 🤖 Task 5 — AI-Powered Document RAG Chatbot Dashboard
+### Practical Evaluation Project | AI Internship Program — DevSynt
 
-A modular Retrieval-Augmented Generation (RAG) system built with **LangChain**, **Groq (Llama-3.1-8B)**, **ChromaDB**, **SentenceTransformers**, and **Streamlit**. 
-
-This application automatically processes PDF documents, indexes text chunks into a persistent vector store, and provides precise, document-grounded answers to user questions using a clean, layered pipeline design.
+A full-stack, enterprise-grade Retrieval-Augmented Generation (RAG) application featuring an interactive 3-tab Streamlit dashboard, a FastAPI backend API, multi-format document processing (PDF, DOCX, TXT), persistent ChromaDB vector storage, and strict citation grounding powered by Google Gemini.
 
 ---
 
-## 🏗️ Project Architecture
+## 🌐 Project Deliverables & Submission Links
 
-The repository enforces a clean separation of concerns without coupling frontend, logic, or storage layers:
+* **Live Dashboard UI:** [https://your-app.streamlit.app](https://your-app.streamlit.app) *(or your Vercel link)*
+* **Loom Video Demo (3–5 min):** [https://www.loom.com/share/your-loom-video-id](https://www.loom.com/share/your-loom-video-id)
+* **LinkedIn Post:** [Link to your LinkedIn submission post tagging DevSynt](https://www.linkedin.com)
+
+
+---
+
+## 🏗️ System Architecture & Data Flow
 
 ```text
+DOCUMENT INGESTION SIDE
+Upload (PDF / DOCX / TXT)
+        ↓
+Text Extraction & Metadata Tagging (doc_id, page_num, file_type)
+        ↓
+Recursive Character Chunking (chunk_size: 700, overlap: 100)
+        ↓
+Vector Embeddings (sentence-transformers / all-MiniLM-L6-v2)
+        ↓
+ChromaDB Persistent Vector Store
+
+QUESTION & ANSWER SIDE
+User Question Input
+        ↓
+Query Embedding & Cosine Similarity Search
+        ↓
+Top-K Context Retrieval + Min Score Threshold Filter
+        ↓
+Strict System Prompt Grounding (Gemini 1.5 Flash)
+        ↓
+Grounded Answer + Source References (📄 File — Page X)
+        ↓
+Streamlit Dashboard / FastAPI Response
+```
+## 📂 Repository Structure
+
 rag-project/
+
 │
 ├── app/
 │   ├── config/
-│   │   ├── settings.py         # System parameters, models, & paths
-│   │   └── prompts.py          # Grounded RAG prompt templates
+│   │   ├── settings.py         # App configuration, env variables, & model parameters
+│   │   └── prompts.py          # Grounded RAG system instructions & citation prompts
 │   │
 │   ├── loaders/
-│   │   └── pdf_loader.py       # PDF file & directory ingestion
+│   │   └── document_loader.py  # Multi-format parser (PDF, DOCX, TXT) with metadata extraction
 │   │
 │   ├── chunking/
-│   │   └── chunker.py          # Document splitting logic
+│   │   └── chunker.py          # Recursive text splitting & chunk ID assignment
 │   │
 │   ├── embeddings/
-│   │   └── embedding_model.py  # Local vector embedding generation
+│   │   └── embedding_model.py  # SentenceTransformers wrapper for vector generation
 │   │
 │   ├── vectorstore/
-│   │   └── chroma_store.py     # ChromaDB persistence & similarity search
+│   │   └── chroma_store.py     # Persistent ChromaDB client, stats, & deletion operations
 │   │
 │   ├── retriever/
-│   │   └── retriever.py        # Context retrieval interface
+│   │   └── retriever.py        # Semantic search & score filtering interface
 │   │
 │   ├── llm/
-│   │   └── llm.py              # Groq LLM client setup
+│   │   └── llm.py              # Google Gemini API client provider
 │   │
 │   └── pipelines/
 │       ├── ingestion_pipeline.py # Orchestrates load -> chunk -> embed -> store
-│       ├── retrieval_pipeline.py # Orchestrates search & context extraction
-│       └── rag_pipeline.py       # Combines retrieval with LLM answer generation
+│       ├── retrieval_pipeline.py # Standalone semantic search & context extractor
+│       └── rag_pipeline.py       # Combines context retrieval with Gemini answer generation
 │
 ├── data/
-│   ├── raw/                    # Stores uploaded source PDFs
-│   ├── processed/              # Processed file cache
-│   └── vector_db/              # Persistent ChromaDB vector database
+│   └── raw/                    # Stores uploaded real-estate sample documents
 │
-├── streamlit_app.py            # Streamlit web application interface
-├── main.py                     # CLI entry point for local pipeline testing
-├── requirements.txt            # Environment dependencies
-├── .env                        # Local environment variables (API keys)
-└── .gitignore                  # Git untracked pattern rule
-```text
-```
+├── generate_sample_pdfs.py     # Script to generate the 5 synthetic real-estate test PDFs
+├── main.py                     # FastAPI REST API Backend & CLI entry point
+├── streamlit_app.py            # 3-Tab Streamlit Dashboard UI
+├── requirements.txt            # System dependencies
+├── .env                        # Local environment keys (API keys)
+└── .gitignore                  # Git untracked pattern rules
 
 ## 🚀 Key Features
-Modular Pipeline Architecture: Pure single-responsibility Python modules separated into config, loaders, chunkers, embeddings, storage, and orchestration pipelines.
 
-Automatic PDF Discovery: Ingestion pipeline scans directory paths and ingests new .pdf documents dynamically.
+3-Tab Dashboard UI: Includes real-time KPI metrics cards, document ingestion management with file deletion, and a multi-turn chat interface.
 
-Persistent Vector Store: Utilizes ChromaDB on local disk storage to avoid re-embedding unchanged documents.
+Multi-Format Ingestion: Extracts text and attaches page/document metadata across .pdf, .docx, and .txt files.
 
-Strict Context Grounding: System prompts explicitly force the LLM to restrict answers to retrieved document context.
+Persistent Vector Storage: Leverages ChromaDB on disk to prevent redundant embedding computation.
 
-Streamlit Web Interface: Features file upload, document re-indexing, interactive chat, and expandable source preview with similarity score tracking.
+Strict Anti-Hallucination Guardrails: Enforces strict context grounding. If data does not exist in uploaded files, the model explicitly responds: "The requested information could not be found in the uploaded documents."
+
+Granular Source Citations: Every valid response displays expandable source blocks containing document names, page numbers, relevance scores, and text snippets (📄 Document_Name.pdf — Page X).
 
 ## 🛠️ Tech Stack
-Framework: Python 3.12+ / LangChain
+Programming Language: Python 3.12+
 
-LLM Provider: Groq API (llama-3.1-8b-instant)
+LLM Engine: Google Gemini 1.5 Flash / Gemini 2.5 Flash
 
 Embedding Model: sentence-transformers/all-MiniLM-L6-v2
 
 Vector Database: ChromaDB
 
-UI: Streamlit
+Backend API: FastAPI / Uvicorn
+
+Frontend Interface: Streamlit
+
+Document Processing: pypdf, Python standard libraries
 
 ## ⚡ Quickstart & Installation
-1. Clone the Repository
-Bash
-git clone [https://github.com/YOUR_USERNAME/pdf-rag-project.git](https://github.com/YOUR_USERNAME/pdf-rag-project.git)
-cd pdf-rag-project
-2. Set Up Virtual Environment
-Using standard venv or uv:
 
+1. Clone Repository & Setup Environment
 Bash
+git clone [https://github.com/YOUR_USERNAME/rag-project.git](https://github.com/YOUR_USERNAME/rag-project.git)
+cd rag-project
+
 python -m venv .venv
-# On Windows PowerShell:
+# Activate on Windows:
 .\.venv\Scripts\activate
-3. Install Dependencies
-Bash
+# Activate on macOS/Linux:
+source .venv/bin/activate
+
 pip install -r requirements.txt
-4. Configure Environment Variables
-Create a .env file in the project root directory and add your Groq API key:
+2. Configure Environment Variables
+Create a .env file in the root folder:
 
-Code snippet
-GROQ_API_KEY=your_actual_groq_api_key_here
-
-##🖥️ Usage Guide
-Running the Web Interface (Streamlit)
-Launch the web UI locally:
+Ini, TOML
+GEMINI_API_KEY=your_google_gemini_api_key_here
+RAW_DATA_DIR=data/raw
+VECTOR_DB_DIR=data/vector_db
+CHUNK_SIZE=700
+CHUNK_OVERLAP=100
+TOP_K=4
+3. Generate Sample Real-Estate PDFs
+Generate the 5 synthetic test documents for AeroEstate Realty:
 
 Bash
-streamlit run streamlit_app.py
-Upload your PDF document in the sidebar.
+python generate_sample_pdfs.py
 
-Click Process & Ingest Documents.
-
-Ask questions in the main input field and review the generated response alongside source citation details.
-
-Running via Terminal (CLI)
-Place a target PDF in data/raw/ and execute main.py:
+## 🖥️ Running the Application
+Option A: Running the Full Stack (Backend API + Frontend UI)
+Terminal 1 — Launch FastAPI Backend:
 
 Bash
 python main.py
-## ☁️ Deployment (Streamlit Cloud)
-Push this repository to GitHub (ensure .env is omitted via .gitignore).
+API interactive docs available at: http://localhost:8000/docs
 
-Log in to Streamlit Community Cloud.
+Terminal 2 — Launch Streamlit Dashboard:
 
-Connect your repository and set the Main file path to streamlit_app.py.
+Bash
+streamlit run streamlit_app.py
+Access UI at: http://localhost:8501
 
-Add your API key in Advanced Settings -> Secrets:
+## 📊 Evaluation & Test Matrix (10 Scenario Report)
+The system was evaluated against the 5 generated AeroEstate Realty documents (Company_Overview.pdf, Property_Listings.pdf, Services_and_Fees.pdf, Frequently_Asked_Questions.pdf, Terms_and_Policies.pdf)
+Test ID,Query Scenario,Question Asked,Expected Behavior / Grounded Citation,Result
+Q1,Direct Fact Lookup,What is the seller commission fee at AeroEstate Realty?,Returns 2.5% fee citing Services_and_Fees.pdf — Page 1,PASS
+Q2,Specific Listing Query,What are the specs and price of Skyline Heights Penthouse?,"Returns $350,000, 3 Bed/4 Bath citing Property_Listings.pdf — Page 1",PASS
+Q3,Policy Verification,What is the escrow deposit policy for buyer token money?,Returns 5% minimum deposit rule citing Terms_and_Policies.pdf — Page 1,PASS
+Q4,Multi-Document Synthesis,Compare property management fee with landlord cancellation rules.,Synthesizes 8% fee (Services.pdf) & 30-day email notice (FAQ.pdf),PASS
+Q5,Executive Team Query,Who is the CEO of AeroEstate Realty and what is her background?,Returns Sarah Jenkins citing Company_Overview.pdf — Page 2,PASS
+Q6,Commercial Lease Lookup,What are the lease terms for the Blue Area commercial office?,"Returns $4,500/month, Floor 7 citing Property_Listings.pdf — Page 2",PASS
+Q7,FAQ Lookup,Can overseas Pakistanis purchase properties remotely?,Returns Yes via NICOP/POA citing Frequently_Asked_Questions.pdf — Page 1,PASS
+Q8,Hallucination Test,Does AeroEstate allow payment using Bitcoin or Ethereum?,Refuses answer; states info could not be found in documents,PASS
+Q9,Out-of-Domain Test,What is the capital city of Australia and its population?,Refuses answer; states info could not be found in documents,PASS
+Q10,Comprehensive Overview,List all legal title search and appraisal service costs.,Summarizes $500 title search & $300/$750 appraisals (Services.pdf),PASS
 
-Ini, TOML
-GROQ_API_KEY = "your_actual_groq_api_key_here"
-Click Deploy!
+## 🔐 Security & Best Practices
+API Keys: Kept strictly inside .env (excluded from git tracking via .gitignore).
+
+Zero Cost Architecture: Uses open-source local embeddings (sentence-transformers) and free-tier Gemini API access.
