@@ -7,9 +7,9 @@ A full-stack, enterprise-grade Retrieval-Augmented Generation (RAG) application 
 
 ## 🌐 Project Deliverables & Submission Links
 
-* **Live Dashboard UI:** [https://your-app.streamlit.app](https://your-app.streamlit.app) *(or your Vercel link)*
-* **Loom Video Demo (3–5 min):** [https://www.loom.com/share/your-loom-video-id](https://www.loom.com/share/your-loom-video-id)
-* **LinkedIn Post:** [Link to your LinkedIn submission post tagging DevSynt](https://www.linkedin.com)
+* **Live Dashboard UI:** https://pdf-rag-project-9bb2xgvmr949vujkmxdubm.streamlit.app/
+* **Video Demo:** blob:https://pdf-rag-project-9bb2xgvmr949vujkmxdubm.streamlit.app/bb447c56-19fe-4b4e-a8db-f0ab9f20f8fc
+* **LinkedIn Post:** https://lnkd.in/p/gj9NdqkU
 
 
 ---
