@@ -12,7 +12,6 @@ class LLMProvider:
         model_name: Optional[str] = None, 
         temperature: float = 0.0
     ):
-        # Retrieve API key
         api_key = getattr(settings, "GROQ_API_KEY", None) or os.getenv("GROQ_API_KEY")
         
         if not api_key:
@@ -20,11 +19,11 @@ class LLMProvider:
                 "GROQ_API_KEY is missing from settings or environment variables."
             )
 
-        # Default model selection: llama-3.3-70b-versatile
+        # Exact Groq production model ID
         selected_model = (
             model_name 
             or getattr(settings, "LLM_MODEL_NAME", None) 
-            or "llama-3.3-70b-versatile"
+            or "openai/gpt-oss-120b"
         )
 
         print(f"⚡ Initializing ChatGroq with model: '{selected_model}'")
@@ -37,9 +36,7 @@ class LLMProvider:
         )
 
     def get_llm(self) -> ChatGroq:
-        """Returns the configured ChatGroq instance."""
         return self.llm
 
 
-# Backward-compatibility alias
 LLMClient = LLMProvider
