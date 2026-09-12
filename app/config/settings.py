@@ -7,7 +7,7 @@ load_dotenv()
 class Settings:
     # API Keys (support both GEMINI_API_KEY and GOOGLE_API_KEY)
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
+    LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "gpt-oss-120b")
 
     # Directories
     RAW_DATA_DIR: str = os.getenv("RAW_DATA_DIR", "data/raw")
